@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 
 const STATS_FILE = path.join(process.cwd(), "src", "data", "stats_db.json");
 
@@ -310,6 +309,7 @@ async function startServer() {
 
   // Vite Integration
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await Function('return import("vite")')();
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
