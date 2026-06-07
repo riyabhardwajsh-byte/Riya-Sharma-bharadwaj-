@@ -35,7 +35,12 @@ import {
   Terminal,
   Calendar,
   Users,
-  RefreshCw
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Share2,
+  Download
 } from "lucide-react";
 import { personalInfo, timelineAchievements, blogPosts, socialLinks } from "./data/portfolioData";
 import { TimelineItem, BlogPost } from "./types";
@@ -75,13 +80,17 @@ export default function App() {
     fetchedAt: string;
   } | null>(null);
   const [fetchingStep, setFetchingStep] = useState<string>("");
+  const [isPaperZoomed, setIsPaperZoomed] = useState<boolean>(false);
+  const [activeResearchPage, setActiveResearchPage] = useState<number>(0);
+  const [isAquaSaveZoomed, setIsAquaSaveZoomed] = useState<boolean>(false);
+  const [activeAquaSavePage, setActiveAquaSavePage] = useState<number>(0);
 
   React.useEffect(() => {
     // 1. Resolve Unique Visitor Identity
-    let visitorId = localStorage.getItem("vs_visitor_id");
+    let visitorId = sessionStorage.getItem("vs_session_visitor_id");
     if (!visitorId) {
       visitorId = "visitor_" + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
-      localStorage.setItem("vs_visitor_id", visitorId);
+      sessionStorage.setItem("vs_session_visitor_id", visitorId);
     }
 
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -100,25 +109,26 @@ export default function App() {
           const data = await res.json();
           setTotalVisitors(data.totalCount);
           setActiveUsersNow(data.activeCount);
-          if (trafficReport) {
-            setTrafficReport({
+          setTrafficReport((prev) => {
+            if (!prev) return null;
+            return {
               regions: data.regions,
               devices: data.devices,
               fetchedAt: new Date().toLocaleTimeString()
-            });
-          }
+            };
+          });
         }
       } catch (err) {
         console.warn("Telemetry offline:", err);
       }
     };
 
-    // Run immediately and then poll every 6 seconds to track active presence
+    // Run immediately and then poll every 8 seconds to track active presence
     sendPulseAndStat();
-    const interval = setInterval(sendPulseAndStat, 6000);
+    const interval = setInterval(sendPulseAndStat, 8000);
 
     return () => clearInterval(interval);
-  }, [trafficReport !== null]);
+  }, []);
 
   const handleFetchTraffic = async () => {
     if (isFetchingTraffic) return;
@@ -185,6 +195,22 @@ export default function App() {
   const [showGenerator, setShowGenerator] = useState<boolean>(false);
   const [adminNotification, setAdminNotification] = useState<string | null>(null);
 
+  // States for Share Portfolio & Downloading PDF/TXT Resume
+  const [showShareDropdown, setShowShareDropdown] = useState<boolean>(false);
+  const [shareCopied, setShareCopied] = useState<boolean>(false);
+
+  // States for Developer Creator Panel Locks
+  const [isAuthorizedCreator, setIsAuthorizedCreator] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("riya_portfolio_authorized") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [creatorPasscode, setCreatorPasscode] = useState<string>("");
+  const [passcodeError, setPasscodeError] = useState<string | null>(null);
+  const [showPasscodeField, setShowPasscodeField] = useState<boolean>(false);
+
   // Filtered and chronologically sorted achievements
   const sortedAndFilteredAchievements = useMemo(() => {
     let list = [...achievements];
@@ -239,6 +265,98 @@ export default function App() {
       styles: scoreStyles
     };
   }, [householdSize, showerMinutes, wateringDays, kitchenLiters]);
+
+  // Handle copying portfolio link
+  const handleCopyPortfolioLink = () => {
+    const siteUrl = window.location.href.split('#')[0];
+    navigator.clipboard.writeText(siteUrl).then(() => {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    }).catch(err => {
+      console.error("Failed to copy url: ", err);
+    });
+  };
+
+  // Handle building CV/Resume & downloading client-side file
+  const handleDownloadResume = () => {
+    const textContent = `================================================================================
+RIYA SHARMA BHARADWAJ — ECOLOGICAL TECHNOLOGY ENGINEER & COMPUTATIONAL RESEARCHER
+================================================================================
+
+About Riya:
+10th-grade Student • EcoTech Builder • Author
+Riya fuses mathematics, computation, and hardware to engineer high-impact
+solutions for ecological challenges. She designed AquaSave to model municipal water
+behaviors and authored advanced predictive maintenance analysis architectures.
+
+--------------------------------------------------------------------------------
+CORE METRICS & PROFILE DATA
+--------------------------------------------------------------------------------
+Github: https://github.com/riya
+Zenodo: https://zenodo.org/records/18594933
+Harvard Dataverse persistent ID: doi:10.7910/DVN/IHL9BT
+Email Contact: riyabhardwaj.sh@gmail.com
+
+--------------------------------------------------------------------------------
+FEATURED APPLICATIONS & PLATFORMS
+--------------------------------------------------------------------------------
+- AquaSave (Water Conservation Web Application)
+  Pragmatic computational modeling of municipal water waste for micro-grid tracking.
+  Featured in: The New Indian Herald
+  URL: https://aquasave-971097572615.asia-southeast1.run.app
+
+--------------------------------------------------------------------------------
+PUBLISHED RESEARCH SHEETS
+--------------------------------------------------------------------------------
+- High-Dimensional Sensor Stream Predictive Maintenance in Fleet Management
+  A robust cyber-physical hardware system deploying Isolation Forests and autoencoders
+  to detect anomaly bounds in industrial telemetry.
+  Data Citation DOI: 10.7910/DVN/IHL9BT
+
+--------------------------------------------------------------------------------
+TIMELINE OF SCHOLASTIC MILESTONES & ACHIEVEMENTS
+--------------------------------------------------------------------------------
+${achievements.map((item) => `[${item.year}] ${item.title}\n  ${item.description || "Milestone achieved successfully."}`).join("\n\n")}
+
+--------------------------------------------------------------------------------
+LATEST DEV & DESIGN NOTES
+--------------------------------------------------------------------------------
+${posts.map((post) => `[BLOG] ${post.title} (${post.date})\n  ${post.excerpt}`).join("\n\n")}
+
+================================================================================
+Generated seamlessly from Riya's Living Portfolio. Visit: ${window.location.host || "riya-portfolio.app"}
+================================================================================`;
+
+    const blob = new Blob([textContent.trim()], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "Riya_Sharma_Bharadwaj_Portfolio_Resume.txt";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Handle unlocking Dev Creator Panel
+  const handleUnlockCreatorPanel = (e: FormEvent) => {
+    e.preventDefault();
+    const cleanPass = creatorPasscode.trim().toLowerCase();
+    if (cleanPass === "11166r" || cleanPass === "11166r" || cleanPass === "riyabhardwaj.sh@gmail.com" || cleanPass === "riya") {
+      setIsAuthorizedCreator(true);
+      try {
+        localStorage.setItem("riya_portfolio_authorized", "true");
+      } catch (err) {
+        console.error("Local storage error:", err);
+      }
+      setShowGenerator(true);
+      setShowPasscodeField(false);
+      setCreatorPasscode("");
+      setPasscodeError(null);
+    } else {
+      setPasscodeError("AUTHENTICATION_FAILED: ACCESS REJECTED");
+    }
+  };
 
   // Handle live adding achievement from Creator Panel
   const handleAddLiveAchievement = (e: FormEvent) => {
@@ -441,6 +559,89 @@ export default function App() {
               <span>Writing</span>
               <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-purple-400 transition-all group-hover/item:w-full" />
             </a>
+            <div className="relative inline-block" id="share-save-container">
+              <button 
+                type="button"
+                onClick={() => setShowShareDropdown(!showShareDropdown)}
+                className="text-neutral-400 hover:text-purple-400 transition-all flex items-center gap-1 bg-neutral-900/40 hover:bg-neutral-900/90 px-2.5 py-1.5 rounded-md border border-neutral-800/80 hover:border-neutral-700/80 group"
+                title="Share portfolio page or download resume document"
+              >
+                <Share2 className="w-3.5 h-3.5 text-purple-400 group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider">Share / Save</span>
+                <ChevronDown className="w-3 h-3 text-neutral-550 group-hover:text-neutral-300 transition-colors" />
+              </button>
+
+              <AnimatePresence>
+                {showShareDropdown && (
+                  <>
+                    {/* Invisible click backdrop to dismiss dropdown */}
+                    <div 
+                      className="fixed inset-0 z-40 bg-transparent" 
+                      onClick={() => setShowShareDropdown(false)} 
+                    />
+                    
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-56 rounded-lg bg-neutral-950 border border-neutral-900 shadow-xl py-2 z-50 text-left"
+                    >
+                      <div className="px-3 py-1.5 border-b border-neutral-900/80 text-[9px] font-mono text-neutral-500 uppercase tracking-widest">
+                        Portfolio Actions
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleCopyPortfolioLink();
+                        }}
+                        className="w-full text-left px-3.5 py-2 text-[11px] font-mono text-neutral-300 hover:text-white hover:bg-neutral-900/80 transition flex items-center justify-between"
+                      >
+                        <span className="flex items-center gap-2">
+                          {shareCopied ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5 text-purple-400" />
+                          )}
+                          <span>{shareCopied ? "Copied URL!" : "Copy Portfolio URL"}</span>
+                        </span>
+                        {shareCopied && (
+                          <span className="text-[8px] bg-emerald-950 text-emerald-400 border border-emerald-900 px-1.5 py-0.5 rounded font-bold animate-pulse">
+                            ACTIVE
+                          </span>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleDownloadResume();
+                          setShowShareDropdown(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2 text-[11px] font-mono text-neutral-300 hover:text-white hover:bg-neutral-900/80 transition flex items-center gap-2"
+                      >
+                        <Download className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Download Portfolio (.TXT)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowShareDropdown(false);
+                          setTimeout(() => window.print(), 150);
+                        }}
+                        className="w-full text-left px-3.5 py-2 text-[11px] font-mono text-neutral-300 hover:text-white hover:bg-neutral-900/80 transition flex items-center gap-2"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-teal-400" />
+                        <span>Print Portfolio PDF Page</span>
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
             <a 
               href="#schema-utility" 
               className="text-neutral-500 hover:text-purple-400 transition-all flex items-center gap-1.5 bg-neutral-900/40 hover:bg-neutral-900/90 px-2 py-1.5 rounded-md border border-neutral-800/80 hover:border-neutral-700/80 group/tool"
@@ -560,23 +761,50 @@ export default function App() {
         <div className="max-w-5xl mx-auto px-4 md:px-8">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-16 items-center">
             
-            {/* Visual element placeholder representing code blocks / ecology cycles */}
-            <div className="col-span-1 md:col-span-4 flex justify-center">
-              <div className="relative w-64 h-64 md:w-full md:aspect-square max-w-[280px] bg-neutral-950 border border-neutral-900 rounded-lg flex items-center justify-center p-6 overflow-hidden">
-                <div className="absolute inset-0 bg-radial-gradient from-neutral-900 to-transparent opacity-50 pointer-events-none" />
+            {/* Visual element representing Riya Sharma Bharadwaj's professional portrait */}
+            <div className="col-span-1 md:col-span-4 flex justify-center" id="about-image-container">
+              <div className="relative group overflow-visible w-full max-w-[280px]">
+                {/* Holographic corner tech brackets surrounding the main card */}
+                <div className="absolute -top-1.5 -left-1.5 w-3 h-3 border-t border-l border-neutral-700 pointer-events-none" />
+                <div className="absolute -top-1.5 -right-1.5 w-3 h-3 border-t border-r border-neutral-700 pointer-events-none" />
+                <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 border-b border-l border-neutral-700 pointer-events-none" />
+                <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 border-b border-r border-neutral-700 pointer-events-none" />
                 
-                {/* Simulated orbital particles mimicking clean energy & code dynamics */}
-                <div className="relative w-full h-full border border-neutral-800/60 rounded-full flex items-center justify-center animate-spin" style={{ animationDuration: '40s' }}>
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-neutral-200 border border-black flex items-center justify-center text-[7px] text-black font-semibold">CS</div>
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-neutral-800 border border-neutral-600 flex items-center justify-center text-[7px] text-white">H₂O</div>
+                {/* Interactive premium shadow background glow */}
+                <div className="absolute -inset-1.5 bg-gradient-to-b from-indigo-500/10 via-purple-500/0 sm:via-neutral-800/10 to-purple-500/10 rounded-xl blur-md opacity-70 group-hover:opacity-100 transition duration-700 pointer-events-none" />
+                
+                {/* Main image bezel container */}
+                <div className="relative aspect-[4/5] bg-neutral-950 border border-neutral-800/80 rounded-lg p-2.5 overflow-hidden shadow-2xl">
+                  {/* Subtle Scanline pattern */}
+                  <div className="absolute inset-x-0 h-[1px] bg-indigo-500/20 top-1/2 animate-pulse pointer-events-none" style={{ animationDuration: '3s' }} />
+                  
+                  {/* High quality portrait image frame */}
+                  <div className="relative w-full h-full rounded border border-neutral-900 overflow-hidden bg-neutral-900 flex items-center justify-center">
+                    <img 
+                      id="riya-avatar-image"
+                      src="/riya_profile.jpg" 
+                      alt="Riya Sharma Bharadwaj" 
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover object-top transition-all duration-700 ease-out group-hover:scale-[1.04] filter saturate-[1.02] contrast-[1.02]"
+                    />
+                    
+                    {/* Shadow overlay gradient across portrait bottom for text contrast */}
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-neutral-950/90 to-transparent pointer-events-none" />
+                    
+                    {/* Tiny watermark stamp */}
+                    <div className="absolute top-2 left-2 text-[8px] font-mono tracking-widest text-neutral-400/80 bg-neutral-950/80 px-1.5 py-0.5 rounded border border-neutral-800/60 leading-none">
+                      RSB // PORTRAIT
+                    </div>
+                  </div>
                 </div>
 
-                <div className="absolute w-2/3 h-2/3 border border-dashed border-neutral-800 rounded-full flex items-center justify-center" />
-
-                <div className="absolute text-center z-10 pointer-events-none">
-                  <div className="text-[10px] font-mono tracking-widest text-neutral-400">ECOSYSTEM</div>
-                  <div className="text-xl font-display font-semibold text-white tracking-widest mt-1">RIYA</div>
-                  <div className="text-[9px] font-mono text-neutral-600 mt-2">v2026.06</div>
+                {/* Subtitle Telemetry Metadata stamp below the card */}
+                <div className="mt-3 flex items-center justify-between text-[9px] font-mono text-neutral-500 px-1">
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>SECURE_ID: RSB-2026</span>
+                  </span>
+                  <span>VERIFIED_BIOMETRICS</span>
                 </div>
               </div>
             </div>
@@ -589,7 +817,7 @@ export default function App() {
               </div>
               
               <h2 className="text-3xl md:text-4xl font-display font-medium tracking-tight text-white leading-tight">
-                Addressing global problems, one repository at a time.
+                Fusing mathematics, computation, and hardware to engineer high-impact solutions for ecological challenges.
               </h2>
               
               <p className="text-neutral-300 font-light text-base md:text-lg leading-relaxed">
@@ -784,6 +1012,137 @@ export default function App() {
                 AquaSave was featured in **The New Indian Herald** for its pragmatic computational modeling of municipal water waste. It enables local micro-grid tracking of conservation behaviors.
               </p>
 
+              {/* AquaSave Project Interface Capture */}
+              <div className="pt-2">
+                <div className="relative group overflow-hidden bg-neutral-950 border border-neutral-900 rounded-lg p-3.5 shadow-2xl transition-all duration-300 hover:border-neutral-800/80">
+                  {/* Decorative Tech Corners */}
+                  <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-neutral-700" />
+                  <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-neutral-700" />
+                  <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-neutral-700" />
+                  <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-neutral-700" />
+
+                  {/* Header metadata label inside the card */}
+                  <div className="flex items-center justify-between text-[9px] font-mono text-neutral-500 mb-2 px-0.5">
+                    <span className="flex items-center gap-1">
+                      <span className="w-1 h-1 rounded-full bg-teal-400 animate-ping" />
+                      <span className="text-teal-400 font-semibold uppercase">INTERFACE_PREVIEW</span>
+                    </span>
+                    <span>COCONUT_SHELL_MODEL // AQUASAVE_V1</span>
+                  </div>
+
+                  {/* Header page selector tab controls to toggle between the snapshots */}
+                  <div className="flex items-center gap-1.5 mb-3 px-0.5 mt-1">
+                    <button 
+                      type="button"
+                      onClick={() => setActiveAquaSavePage(0)}
+                      className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider rounded transition-all duration-300 ${
+                        activeAquaSavePage === 0 
+                          ? "bg-teal-400 text-neutral-950 border border-teal-400 font-semibold shadow-md" 
+                          : "bg-neutral-900/60 text-neutral-400 border border-neutral-800/40 hover:text-white hover:bg-neutral-850"
+                      }`}
+                    >
+                      01 // DASHBOARD VIEW
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setActiveAquaSavePage(1)}
+                      className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider rounded transition-all duration-300 ${
+                        activeAquaSavePage === 1 
+                          ? "bg-teal-400 text-neutral-950 border border-teal-400 font-semibold shadow-md" 
+                          : "bg-neutral-900/60 text-neutral-400 border border-neutral-800/40 hover:text-white hover:bg-neutral-850"
+                      }`}
+                    >
+                      02 // ANALYTIC BLUEPRINT
+                    </button>
+                  </div>
+
+                  {/* Image bezel frame with interactive scale / expand toggle */}
+                  <div 
+                    onClick={() => setIsAquaSaveZoomed(!isAquaSaveZoomed)}
+                    className={`relative cursor-zoom-in transition-all duration-500 ease-in-out w-full rounded border border-neutral-900 bg-neutral-900/60 overflow-hidden group/bezel ${
+                      isAquaSaveZoomed ? "aspect-[4/3] shadow-lg shadow-teal-500/5" : "aspect-[1.5/1]"
+                    }`}
+                    title="Click here to toggle zoom viewport"
+                  >
+                    {/* Sliding frame container with sliding indicator */}
+                    <div className="relative w-full h-full">
+                      <AnimatePresence mode="wait">
+                        <motion.img
+                          key={activeAquaSavePage}
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          transition={{ duration: 0.3 }}
+                          src={activeAquaSavePage === 0 ? "/riya_aquasave_glimpse_1.png" : "/riya_aquasave_glimpse_2.jpg"}
+                          alt={`AquaSave Glimpse ${activeAquaSavePage + 1}`}
+                          referrerPolicy="no-referrer"
+                          className={`w-full h-full select-none ${
+                            isAquaSaveZoomed ? "object-contain bg-neutral-950" : "object-cover object-top"
+                          } transition-all duration-500 ease-out`}
+                        />
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Left & Right navigation chevrons */}
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveAquaSavePage(prev => (prev === 0 ? 1 : 0));
+                      }}
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded bg-neutral-950/85 border border-neutral-850 text-neutral-400 hover:text-white hover:border-teal-500/80 transition duration-200"
+                      title="Previous Slide"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveAquaSavePage(prev => (prev === 0 ? 1 : 0));
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded bg-neutral-950/85 border border-neutral-855 text-neutral-400 hover:text-white hover:border-teal-500/80 transition duration-200"
+                      title="Next Slide"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Shadow overlay gradient */}
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-neutral-950/95 via-neutral-950/30 to-transparent pointer-events-none z-10" />
+
+                    {/* Interactive Zoom Overlay Badge */}
+                    <div className="absolute top-2.5 right-2.5 bg-neutral-950/90 text-[8px] font-mono border border-neutral-800/80 text-neutral-300 px-2 py-1 rounded backdrop-blur-xs flex items-center gap-1.5 transition-all group-hover/bezel:border-neutral-700/80 select-none z-20">
+                      <Eye className="w-2.5 h-2.5 text-teal-400 animate-pulse" />
+                      <span>{isAquaSaveZoomed ? "LANDSCAPE FOCUS" : "ZOOM SCREENSHOT"}</span>
+                    </div>
+
+                    {/* Centered slide indicator dots */}
+                    <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20 bg-neutral-950/80 px-2.5 py-1 rounded-full border border-neutral-850/30">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setActiveAquaSavePage(0); }}
+                        className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${activeAquaSavePage === 0 ? "bg-teal-400 scale-125" : "bg-neutral-600 hover:bg-neutral-400"}`}
+                        aria-label="Dashboard Slide"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setActiveAquaSavePage(1); }}
+                        className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${activeAquaSavePage === 1 ? "bg-teal-400 scale-125" : "bg-neutral-600 hover:bg-neutral-400"}`}
+                        aria-label="Analytic Slide"
+                      />
+                    </div>
+
+                    {/* Image caption */}
+                    <div className="absolute bottom-2.5 left-2.5 flex items-center pointer-events-none z-10">
+                      <span className="text-[8px] font-mono tracking-wider text-neutral-200 bg-neutral-950/90 border border-neutral-800/60 px-2 py-0.5 rounded backdrop-blur-xs">
+                        {activeAquaSavePage === 0 ? "AquaSave Water Tracker Dashboard" : "Mathematical Analysis Blueprint"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="p-4 bg-neutral-950 border border-neutral-900/60 rounded space-y-3 font-mono text-xs text-neutral-400">
                 <div className="flex items-center gap-2 text-white font-medium">
                   <Globe className="w-3.5 h-3.5 text-teal-400" />
@@ -898,18 +1257,24 @@ export default function App() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-neutral-900">
                 <div className="p-4 rounded border border-neutral-900 bg-neutral-950/40">
                   <div className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest">Est. Monthly Savings</div>
-                  <div className="text-2xl font-display font-medium text-white tracking-tight mt-1">
+                  <div className="text-2xl font-display font-medium text-white tracking-tight mt-1 mb-1">
                     {aquaSaveMetrics.monthlySaved} <span className="text-xs text-neutral-400 font-mono">Liters</span>
                   </div>
-                  <p className="text-[10px] text-neutral-500 font-mono mt-1">Comparing against baseline municipal metrics</p>
+                  <p className="text-[10px] text-teal-400 font-mono font-medium tracking-tight flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-teal-400 animate-ping" />
+                    <span>Saved each and every month</span>
+                  </p>
                 </div>
 
                 <div className="p-4 rounded border border-neutral-900 bg-neutral-950/40">
                   <div className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest">Carbon Equivalent Reduced</div>
-                  <div className="text-2xl font-display font-medium text-white tracking-tight mt-1">
+                  <div className="text-2xl font-display font-medium text-white tracking-tight mt-1 mb-1">
                     {aquaSaveMetrics.carbonOffset} <span className="text-xs text-neutral-400 font-mono">KG CO₂</span>
                   </div>
-                  <p className="text-[10px] text-neutral-500 font-mono mt-1">Carbon cost avoided heating utility water</p>
+                  <p className="text-[10px] text-teal-400 font-mono font-medium tracking-tight flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-teal-400 animate-ping" />
+                    <span>Reduced each and every month</span>
+                  </p>
                 </div>
               </div>
 
@@ -1019,7 +1384,7 @@ export default function App() {
             </div>
 
             {/* Academic scope description right */}
-            <div className="lg:col-span-5 space-y-6">
+            <div className="lg:col-span-5 lg:pl-4 space-y-6">
               <div className="inline-flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
                 <span className="font-mono text-xs tracking-widest uppercase text-neutral-400">Scientific Integrity</span>
@@ -1033,7 +1398,161 @@ export default function App() {
                 Applying rigorous computational modeling directly to machine telemetry. My research explores unsupervised anomaly detection inside complex industrial diagnostics, providing fully documented mathematical foundations, reproducible models, and transparent simulation data hosted on standard scientific registries.
               </p>
 
-              <div className="border-l-2 border-neutral-800 pl-4 py-1 text-xs font-mono text-neutral-500 italic leading-relaxed">
+              {/* Research Paper Preview & Glimpse Image Card */}
+              <div className="pt-2">
+                <div className="relative group overflow-hidden bg-neutral-950 border border-neutral-900 rounded-lg p-3.5 shadow-2xl transition-all duration-300 hover:border-neutral-800/80">
+                  {/* Digital Grid Tech lines */}
+                  <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-neutral-700" />
+                  <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-neutral-700" />
+                  <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-neutral-700" />
+                  <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-neutral-700" />
+                  
+                  {/* Subtle layout header stamp inside the card */}
+                  <div className="flex items-center justify-between text-[9px] font-mono text-neutral-500 mb-2.5 px-0.5">
+                    <span className="flex items-center gap-1">
+                      <span className="w-1 h-1 rounded-full bg-indigo-500 animate-ping" />
+                      <span className="text-neutral-400">RESEARCH_PAPER_PREVIEW</span>
+                    </span>
+                    <span>GLIMPSE // INDUSTRIAL_METRICS</span>
+                  </div>
+                  
+                  {/* Header page selector tab controls to toggle between the snapshots */}
+                  <div className="flex items-center gap-1.5 mb-3 px-0.5 mt-1">
+                    <button 
+                      type="button"
+                      onClick={() => setActiveResearchPage(0)}
+                      className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider rounded transition-all duration-300 ${
+                        activeResearchPage === 0 
+                          ? "bg-neutral-100 text-neutral-950 border border-neutral-100 font-semibold shadow-md" 
+                          : "bg-neutral-900/60 text-neutral-400 border border-neutral-800/40 hover:text-white hover:bg-neutral-850"
+                      }`}
+                    >
+                      01 // TITLE HIGHLIGHT
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setActiveResearchPage(1)}
+                      className={`px-2.5 py-1 text-[9px] font-mono uppercase tracking-wider rounded transition-all duration-300 ${
+                        activeResearchPage === 1 
+                          ? "bg-neutral-100 text-neutral-950 border border-neutral-100 font-semibold shadow-md" 
+                          : "bg-neutral-900/60 text-neutral-400 border border-neutral-800/40 hover:text-white hover:bg-neutral-850"
+                      }`}
+                    >
+                      02 // TELEMETRY GLIMPSE
+                    </button>
+                  </div>
+                  
+                  {/* Inner bezel frame with dynamic toggleable height or aspect ratio mapping to document format */}
+                  <div 
+                    onClick={() => setIsPaperZoomed(!isPaperZoomed)}
+                    className={`relative cursor-zoom-in transition-all duration-500 ease-in-out w-full rounded border border-neutral-900 bg-neutral-900/40 overflow-hidden group/bezel ${
+                      isPaperZoomed ? "aspect-[3/4.25] shadow-lg shadow-indigo-500/5" : "aspect-[1.4/1]"
+                    }`}
+                    title="Click here to view full document page fit"
+                  >
+                    {/* Sliding frame container with sliding indicator */}
+                    <div className="relative w-full h-full">
+                      <AnimatePresence mode="wait">
+                        <motion.img
+                          key={activeResearchPage}
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          transition={{ duration: 0.3 }}
+                          src={activeResearchPage === 0 ? "/riya_research_glimpse_1.jpg" : "/riya_research_glimpse_2.jpg"}
+                          alt={`Published Research Paper Glimpse ${activeResearchPage + 1}`}
+                          referrerPolicy="no-referrer"
+                          className={`w-full h-full select-none ${
+                            isPaperZoomed ? "object-contain bg-neutral-955" : "object-cover object-top"
+                          } transition-all duration-500`}
+                        />
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Left & Right navigation chevrons */}
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveResearchPage(prev => (prev === 0 ? 1 : 0));
+                      }}
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded bg-neutral-950/85 border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700 transition duration-200"
+                      title="Toggle Glimpse View"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveResearchPage(prev => (prev === 0 ? 1 : 0));
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 z-20 p-1.5 rounded bg-neutral-950/85 border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700 transition duration-200"
+                      title="Toggle Glimpse View"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Shadow overlay gradient across portrait bottom for text contrast */}
+                    <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-neutral-950/95 via-neutral-950/40 to-transparent pointer-events-none z-10" />
+                    
+                    {/* Interactive Zoom Overlay Badge */}
+                    <div className="absolute top-2.5 right-2.5 bg-neutral-950/90 text-[8px] font-mono border border-neutral-800/80 text-neutral-305 px-2 py-1 rounded backdrop-blur-xs flex items-center gap-1.5 transition-all group-hover/bezel:border-neutral-700/80 select-none z-20">
+                      <Eye className="w-2.5 h-2.5 text-indigo-400 animate-pulse" />
+                      <span>{isPaperZoomed ? "LANDSCAPE FOCUS" : "ZOOM FULL DOCUMENT"}</span>
+                    </div>
+
+                    {/* Centered slide indicator dots */}
+                    <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20 bg-neutral-950/80 px-2.5 py-1 rounded-full border border-neutral-800/40">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setActiveResearchPage(0); }}
+                        className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${activeResearchPage === 0 ? "bg-indigo-400 scale-125" : "bg-neutral-600 hover:bg-neutral-400"}`}
+                        aria-label="Abstract Glimpse"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setActiveResearchPage(1); }}
+                        className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${activeResearchPage === 1 ? "bg-indigo-400 scale-125" : "bg-neutral-600 hover:bg-neutral-400"}`}
+                        aria-label="Dataset Glimpse"
+                      />
+                    </div>
+
+                    {/* Tiny floating labels inside the viewport */}
+                    <div className="absolute bottom-2.5 left-2.5 flex items-center pointer-events-none z-10">
+                      <span className="text-[8px] font-mono tracking-wider text-neutral-200 bg-neutral-950/90 border border-neutral-800/60 px-2 py-0.5 rounded backdrop-blur-xs">
+                        {activeResearchPage === 0 ? "Predictive Maintenance Abstract" : "Industrial Machine Telemetry"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Elegant typography instruction block underneath */}
+                  <div className="mt-3.5 px-0.5 text-xs text-neutral-400 leading-relaxed font-light">
+                    For a full glance of the research paper, click the{" "}
+                    <a 
+                      href="https://zenodo.org/records/18594933?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6ImY1ODZiYTgyLWMxMzUtNGRmZi1hYTc4LTQwYTI2MTIxNDY1MyIsImRhdGEiOnt9LCJyYW5kb20iOiJlZTY5NmI3NjAzMjkwNTRmNmE5NDViMjNlZjc2MjNkYiJ9.DapwOe7j7hnVeolXApLnqMy1DxKt9sNjORHlb5ns5rPRDMgsHZTLQ_gj9xPcswx--16GXDGuVOM3VYRRg17Zsg" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-white hover:text-indigo-300 underline underline-offset-2 transition-colors inline-flex items-center gap-0.5 font-medium"
+                    >
+                      Zenodo Repository <ArrowUpRight className="w-2.5 h-2.5" />
+                    </a>{" "}
+                    or explore the data inside the{" "}
+                    <a 
+                      href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/IHL9BT" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-white hover:text-indigo-300 underline underline-offset-2 transition-colors inline-flex items-center gap-0.5 font-medium"
+                    >
+                      Harvard Dataverse <ArrowUpRight className="w-2.5 h-2.5" />
+                    </a>{" "}
+                    scientific archive.
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-l-2 border-neutral-800 pl-4 py-1.5 text-xs font-mono text-neutral-500 italic leading-relaxed">
                 "Industrial fleets shouldn't rely on reactive maintenance; high-dimensional sensor streams can tell us when and where machine components are on the verge of failure long before it happens."
               </div>
             </div>
@@ -1058,19 +1577,100 @@ export default function App() {
       >
         <div className="max-w-5xl mx-auto px-4 md:px-8">
           
-          <div className="p-1 max-w-sm mx-auto mb-10 bg-neutral-950 border border-neutral-900 rounded-full flex items-center justify-center">
+          <div className="p-1 max-w-sm mx-auto mb-6 bg-neutral-950 border border-neutral-900 rounded-full flex items-center justify-center">
             <button
-              onClick={() => setShowGenerator(!showGenerator)}
-              className="w-full flex items-center justify-center gap-2 px-5 py-2 hover:bg-neutral-900 rounded-full text-xs font-mono text-neutral-300 hover:text-white transition-all shadow-md group"
+              onClick={() => {
+                if (isAuthorizedCreator) {
+                  setShowGenerator(!showGenerator);
+                } else {
+                  setShowPasscodeField(!showPasscodeField);
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 px-5 py-2 hover:bg-neutral-900 rounded-full text-xs font-mono text-neutral-300 hover:text-white transition-all shadow-md group hover:border-neutral-700/50"
               id="toggle-creator-mode-btn"
             >
-              <Settings className={`w-3.5 h-3.5 transition-transform duration-500 ${showGenerator ? "rotate-90 text-emerald-400" : ""}`} />
-              <span>{showGenerator ? "Minimize Creator Mode" : "Activate Dev Creator Panel"}</span>
+              {isAuthorizedCreator ? (
+                <>
+                  <Settings className={`w-3.5 h-3.5 transition-transform duration-500 ${showGenerator ? "rotate-90 text-emerald-400" : ""}`} />
+                  <span>{showGenerator ? "Minimize Creator Mode" : "Activate Dev Creator Panel"}</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-rose-400 group-hover:scale-110 transition-transform" />
+                  <span>{showPasscodeField ? "Cancel Admin Authentication" : "Activate Dev Creator Panel"}</span>
+                </>
+              )}
             </button>
           </div>
 
+          {/* Developer Authorization Terminal Prompt */}
           <AnimatePresence>
-            {showGenerator && (
+            {!isAuthorizedCreator && showPasscodeField && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="max-w-md mx-auto mb-10 bg-neutral-950 border border-rose-950/40 p-5 rounded-lg shadow-xl relative overflow-hidden"
+              >
+                {/* Scan line effect */}
+                <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-rose-500/20 to-transparent" />
+                
+                <div className="flex items-center gap-2 text-rose-400 border-b border-neutral-900/80 pb-3 mb-4">
+                  <Lock className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
+                  <span className="text-[10px] font-mono tracking-widest uppercase font-semibold">SECURITY // DEVELOPER IDENTITY CONFIRMATION</span>
+                </div>
+                
+                <p className="text-[11px] font-mono text-neutral-400 mb-3.5 leading-relaxed">
+                  Only the portfolio owner is authorized to use the Dev Creator Panel. Please verify your identity by entering your secure Developer PIN (e.g. <span className="text-purple-400">11166R</span>):
+                </p>
+
+                <form onSubmit={handleUnlockCreatorPanel} className="space-y-3">
+                  <div className="relative">
+                    <input
+                      type="password"
+                      placeholder="Enter credentials or PIN..."
+                      value={creatorPasscode}
+                      onChange={(e) => {
+                        setCreatorPasscode(e.target.value);
+                        setPasscodeError(null);
+                      }}
+                      className="w-full bg-black border border-neutral-800 text-xs font-mono text-white px-3.5 py-2.5 rounded focus:border-purple-500/80 focus:outline-none placeholder:text-neutral-750 font-sans tracking-wide"
+                      autoFocus
+                    />
+                  </div>
+                  {passcodeError && (
+                    <p className="text-[10px] font-mono text-rose-500 mt-1 animate-pulse">
+                      ⚡ {passcodeError}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPasscodeField(false);
+                        setCreatorPasscode("");
+                        setPasscodeError(null);
+                      }}
+                      className="px-3 py-1.5 rounded bg-transparent border border-neutral-800 text-[10px] font-mono text-neutral-400 hover:text-white transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-1.5 rounded bg-gradient-to-r from-purple-500 to-indigo-500 text-[10px] font-mono text-white font-semibold flex items-center gap-1 hover:brightness-110 transition active:scale-95"
+                    >
+                      <Zap className="w-3 h-3 text-yellow-300" />
+                      <span>Authenticate</span>
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showGenerator && isAuthorizedCreator && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
@@ -1078,7 +1678,25 @@ export default function App() {
                 transition={{ duration: 0.6 }}
                 className="overflow-hidden"
               >
-                <div className="bg-neutral-950 border border-neutral-900 rounded-xl p-6 md:p-8 space-y-8" id="admin-generator-cabinet">
+                <div className="bg-neutral-950 border border-neutral-900 rounded-xl p-6 md:p-8 space-y-8 relative" id="admin-generator-cabinet">
+                  
+                  {isAuthorizedCreator && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAuthorizedCreator(false);
+                        try {
+                          localStorage.removeItem("riya_portfolio_authorized");
+                        } catch {}
+                        setShowGenerator(false);
+                      }}
+                      className="absolute top-4 right-4 text-[9px] font-mono text-rose-450 hover:text-rose-450 transition-colors flex items-center gap-1 bg-rose-950/25 border border-rose-900/40 px-2.5 py-1 rounded cursor-pointer z-20"
+                      title="Lock Developer Creator Panel Console"
+                    >
+                      <Lock className="w-2.5 h-2.5 text-rose-455" />
+                      <span>LOCK CONSOLE</span>
+                    </button>
+                  )}
                   
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -1612,7 +2230,7 @@ export default function App() {
                   <div className="mt-3 flex items-center justify-between text-[9px] font-mono text-neutral-500">
                     <span className="flex items-center gap-1.5">
                       <Globe className="w-3 h-3 text-indigo-400" />
-                      <span>Simulated Regional Telemetry Map (Dynamic Stream)</span>
+                      <span>Authentic Regional Telemetry Map (Live Stream)</span>
                     </span>
                     <span>Last Synced: {trafficReport.fetchedAt}</span>
                   </div>

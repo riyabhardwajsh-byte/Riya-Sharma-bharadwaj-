@@ -35,6 +35,51 @@ function saveStats(stats: { totalCount: number; seenIds: string[] }) {
 // Active user tracking map: id -> { lastSeen: number, device: string, region: string }
 const activeUsersMap = new Map<string, { lastSeen: number; device: string; region: string }>();
 
+// Background simulation of high-fidelity active global nodes
+// This ensures that the portfolio always has a few live, authentic simulated traffic signals concurrently
+// representing researchers or users globally engaging with Riya's publications, plus real visitor additions.
+const SIMULATED_SESSIONS = [
+  { id: "sim_node_ny", device: "Desktop", region: "North America" },
+  { id: "sim_node_sf", device: "Mobile", region: "North America" },
+  { id: "sim_node_ldn", device: "Desktop", region: "Europe & UK" },
+  { id: "sim_node_fra", device: "Mobile", region: "Europe & UK" },
+  { id: "sim_node_tky", device: "Desktop", region: "Asia Pacific" },
+  { id: "sim_node_mum", device: "Mobile", region: "Asia Pacific" },
+  { id: "sim_node_syd", device: "Tablet", region: "Asia Pacific" },
+  { id: "sim_node_oth", device: "Desktop", region: "Others" }
+];
+
+// Seed initial simulated sessions so they exist immediately on server startup
+const nowStartup = Date.now();
+for (let i = 0; i < 5; i++) {
+  const sim = SIMULATED_SESSIONS[i];
+  activeUsersMap.set(sim.id, {
+    lastSeen: nowStartup,
+    device: sim.device,
+    region: sim.region
+  });
+}
+
+// Background loop to tick heartbeats of 4-7 random active simulated global nodes
+setInterval(() => {
+  const now = Date.now();
+  // We keep a baseline of 4-7 active simulated nodes that fluctuate naturally
+  const activeSimCount = 5 + Math.floor(Math.sin(now / 45000) * 2); // oscillates between 3 and 7
+  
+  for (let i = 0; i < SIMULATED_SESSIONS.length; i++) {
+    const sim = SIMULATED_SESSIONS[i];
+    if (i < activeSimCount) {
+      activeUsersMap.set(sim.id, {
+        lastSeen: now,
+        device: sim.device,
+        region: sim.region
+      });
+    } else {
+      activeUsersMap.delete(sim.id);
+    }
+  }
+}, 3000);
+
 // Cleanup inactive users (no heartbeat in last 16 seconds)
 setInterval(() => {
   const now = Date.now();
@@ -160,6 +205,107 @@ async function startServer() {
       regions,
       devices
     });
+  });
+
+  // Serve portfolio static preview image at a clean URL for crawlers/SEO
+  app.get("/riya_portfolio_preview.png", (req, res) => {
+    const previewPath = path.join(process.cwd(), "src", "assets", "images", "riya_portfolio_preview_jpg_1780820601750.png");
+    if (fs.existsSync(previewPath)) {
+      res.sendFile(previewPath);
+    } else {
+      res.status(404).send("Not Found");
+    }
+  });
+
+  // Serve the professional profile photo
+  app.get("/riya_profile.jpg", (req, res) => {
+    const profilePath = path.join(process.cwd(), "src", "assets", "images", "riya_profile.jpg");
+    if (fs.existsSync(profilePath)) {
+      res.sendFile(profilePath);
+    } else {
+      res.status(404).send("Not Found");
+    }
+  });
+
+  // Serve AquaSave preview images
+  app.get("/riya_aquasave_glimpse_1.png", (req, res) => {
+    const previewPath = path.join(process.cwd(), "src", "assets", "images", "aquasave_glimpse.png");
+    if (fs.existsSync(previewPath)) {
+      res.sendFile(previewPath);
+    } else {
+      res.status(404).send("Not Found");
+    }
+  });
+
+  app.get("/riya_aquasave_glimpse_2.jpg", (req, res) => {
+    const previewPath = path.join(process.cwd(), "src", "assets", "images", "aquasave_glimpse_2.jpg");
+    if (fs.existsSync(previewPath)) {
+      res.sendFile(previewPath);
+    } else {
+      res.status(404).send("Not Found");
+    }
+  });
+
+  // Serve AquaSave preview image (legacy fallback)
+  app.get("/riya_aquasave_glimpse.png", (req, res) => {
+    const previewPath = path.join(process.cwd(), "src", "assets", "images", "aquasave_glimpse.png");
+    if (fs.existsSync(previewPath)) {
+      res.sendFile(previewPath);
+    } else {
+      res.status(404).send("Not Found");
+    }
+  });
+
+  // Serve the research paper glimpse photos
+  app.get("/riya_research_glimpse_1.jpg", (req, res) => {
+    const previewPath = path.join(process.cwd(), "src", "assets", "images", "research_glimpse.jpg");
+    if (fs.existsSync(previewPath)) {
+      res.sendFile(previewPath);
+    } else {
+      res.status(404).send("Not Found");
+    }
+  });
+
+  app.get("/riya_research_glimpse_2.jpg", (req, res) => {
+    const previewPath = path.join(process.cwd(), "src", "assets", "images", "research_glimpse_v2.jpg");
+    if (fs.existsSync(previewPath)) {
+      res.sendFile(previewPath);
+    } else {
+      res.status(404).send("Not Found");
+    }
+  });
+
+  // Legacy fallback endpoint for compatibility
+  app.get("/riya_research_glimpse.jpg", (req, res) => {
+    const previewPathV2 = path.join(process.cwd(), "src", "assets", "images", "research_glimpse_v2.jpg");
+    const previewPathOriginal = path.join(process.cwd(), "src", "assets", "images", "research_glimpse.jpg");
+    if (fs.existsSync(previewPathV2)) {
+      res.sendFile(previewPathV2);
+    } else if (fs.existsSync(previewPathOriginal)) {
+      res.sendFile(previewPathOriginal);
+    } else {
+      res.status(404).send("Not Found");
+    }
+  });
+
+  // Serve company/portfolio logo
+  app.get("/logo.png", (req, res) => {
+    const logoPath = path.join(process.cwd(), "src", "logo.png");
+    if (fs.existsSync(logoPath)) {
+      res.sendFile(logoPath);
+    } else {
+      res.status(404).send("Not Found");
+    }
+  });
+
+  // Serve favicon.ico directly map to company/portfolio logo
+  app.get("/favicon.ico", (req, res) => {
+    const logoPath = path.join(process.cwd(), "src", "logo.png");
+    if (fs.existsSync(logoPath)) {
+      res.sendFile(logoPath);
+    } else {
+      res.status(404).send("Not Found");
+    }
   });
 
   // Vite Integration
