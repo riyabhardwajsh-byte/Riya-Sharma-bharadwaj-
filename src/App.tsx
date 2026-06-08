@@ -40,11 +40,19 @@ import {
   ChevronRight,
   ChevronDown,
   Share2,
-  Download
+  Download,
+  Cpu,
+  PenTool,
+  User
 } from "lucide-react";
-import { personalInfo, timelineAchievements, blogPosts, socialLinks } from "./data/portfolioData";
-import { TimelineItem, BlogPost } from "./types";
+import { personalInfo, timelineAchievements, blogPosts, socialLinks, skillCategories } from "./data/portfolioData";
+import { TimelineItem, BlogPost, SkillCategory } from "./types";
 import logoImg from "./logo.png";
+import profileImg from "./assets/images/riya_profile.jpg";
+import aquasaveGlimpse1 from "./assets/images/aquasave_glimpse.png";
+import aquasaveGlimpse2 from "./assets/images/aquasave_glimpse_2.jpg";
+import researchGlimpse1 from "./assets/images/research_glimpse.jpg";
+import researchGlimpse2 from "./assets/images/research_glimpse_v2.jpg";
 
 // Helper component to map icon names string from database into clean monochrome Lucide Icons
 function SocialIcon({ name, className }: { name: string; className?: string }) {
@@ -58,6 +66,18 @@ function SocialIcon({ name, className }: { name: string; className?: string }) {
     case "Instagram": return <Instagram className={cn} />;
     case "Facebook": return <Facebook className={cn} />;
     default: return <ExternalLink className={cn} />;
+  }
+}
+
+// Helper component to map category icon names into Lucide Icon components
+function CategoryIcon({ name, className }: { name: string; className?: string }) {
+  const cn = className || "w-4 h-4";
+  switch (name) {
+    case "Code": return <Code className={cn} />;
+    case "Cpu": return <Cpu className={cn} />;
+    case "PenTool": return <PenTool className={cn} />;
+    case "Award": return <Award className={cn} />;
+    default: return <Code className={cn} />;
   }
 }
 
@@ -197,6 +217,7 @@ export default function App() {
 
   // States for Share Portfolio & Downloading PDF/TXT Resume
   const [showShareDropdown, setShowShareDropdown] = useState<boolean>(false);
+  const [showMobileShare, setShowMobileShare] = useState<boolean>(false);
   const [shareCopied, setShareCopied] = useState<boolean>(false);
 
   // States for Developer Creator Panel Locks
@@ -312,6 +333,11 @@ PUBLISHED RESEARCH SHEETS
   A robust cyber-physical hardware system deploying Isolation Forests and autoencoders
   to detect anomaly bounds in industrial telemetry.
   Data Citation DOI: 10.7910/DVN/IHL9BT
+
+--------------------------------------------------------------------------------
+PROFESSIONAL SKILLS & AREA PROFICIENCIES
+--------------------------------------------------------------------------------
+${skillCategories.map((cat) => `* ${cat.category}:\n  ↳ ${cat.skills.join("\n  ↳ ")}`).join("\n\n")}
 
 --------------------------------------------------------------------------------
 TIMELINE OF SCHOLASTIC MILESTONES & ACHIEVEMENTS
@@ -483,7 +509,7 @@ Generated seamlessly from Riya's Living Portfolio. Visit: ${window.location.host
   };
 
   return (
-    <div className="min-h-screen bg-black text-neutral-200 font-sans selection:bg-neutral-200 selection:text-black antialiased relative">
+    <div className="min-h-screen bg-black text-neutral-200 font-sans selection:bg-neutral-200 selection:text-black antialiased relative pb-24 lg:pb-0">
       
       {/* Decorative ambient grid overlay */}
       <div 
@@ -515,10 +541,10 @@ Generated seamlessly from Riya's Living Portfolio. Visit: ${window.location.host
         {/* Sleek dynamic top glow line */}
         <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-purple-500/10 via-purple-400/80 to-purple-500/10" />
         
-        <div className="max-w-6xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 py-3.5 flex items-center justify-between">
           <a href="#" className="flex items-center gap-3 group relative" id="logo-link">
             <div className="relative w-9 h-9 rounded-full bg-neutral-950 border border-neutral-800 flex items-center justify-center overflow-hidden group-hover:border-purple-500 transition-all duration-300 shadow-inner">
-              <img 
+               <img 
                 src={logoImg} 
                 alt="Riya Sharma Bharadwaj Logo" 
                 className="w-full h-full object-cover relative z-10"
@@ -538,11 +564,12 @@ Generated seamlessly from Riya's Living Portfolio. Visit: ${window.location.host
             </div>
           </a>
 
-          <nav className="flex items-center gap-3 sm:gap-4 md:gap-8 text-xs font-mono text-neutral-400">
+          <nav className="hidden lg:flex flex-wrap items-center justify-end gap-x-3.5 gap-y-2 lg:gap-8 text-xs font-mono text-neutral-400">
             <a href="#about" className="hover:text-white transition-colors relative py-1 group/item">
               <span>About</span>
               <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-purple-400 transition-all group-hover/item:w-full" />
             </a>
+
             <a href="#journey" className="hover:text-white transition-colors relative py-1 group/item">
               <span>Journey</span>
               <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-purple-400 transition-all group-hover/item:w-full" />
@@ -782,7 +809,7 @@ Generated seamlessly from Riya's Living Portfolio. Visit: ${window.location.host
                   <div className="relative w-full h-full rounded border border-neutral-900 overflow-hidden bg-neutral-900 flex items-center justify-center">
                     <img 
                       id="riya-avatar-image"
-                      src="/riya_profile.jpg" 
+                      src={profileImg} 
                       alt="Riya Sharma Bharadwaj" 
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover object-top transition-all duration-700 ease-out group-hover:scale-[1.04] filter saturate-[1.02] contrast-[1.02]"
@@ -1073,7 +1100,7 @@ Generated seamlessly from Riya's Living Portfolio. Visit: ${window.location.host
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -10 }}
                           transition={{ duration: 0.3 }}
-                          src={activeAquaSavePage === 0 ? "/riya_aquasave_glimpse_1.png" : "/riya_aquasave_glimpse_2.jpg"}
+                          src={activeAquaSavePage === 0 ? aquasaveGlimpse1 : aquasaveGlimpse2}
                           alt={`AquaSave Glimpse ${activeAquaSavePage + 1}`}
                           referrerPolicy="no-referrer"
                           className={`w-full h-full select-none ${
@@ -1459,7 +1486,7 @@ Generated seamlessly from Riya's Living Portfolio. Visit: ${window.location.host
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -10 }}
                           transition={{ duration: 0.3 }}
-                          src={activeResearchPage === 0 ? "/riya_research_glimpse_1.jpg" : "/riya_research_glimpse_2.jpg"}
+                          src={activeResearchPage === 0 ? researchGlimpse1 : researchGlimpse2}
                           alt={`Published Research Paper Glimpse ${activeResearchPage + 1}`}
                           referrerPolicy="no-referrer"
                           className={`w-full h-full select-none ${
@@ -2265,6 +2292,176 @@ Generated seamlessly from Riya's Living Portfolio. Visit: ${window.location.host
 
         </div>
       </motion.footer>
+
+      {/* Sticky Bottom Thumb-Navigation Bar for Mobile & Tablet */}
+      <div className="fixed bottom-0 left-0 right-0 z-55 lg:hidden px-3 pb-3 pt-2 bg-gradient-to-t from-black via-black/95 to-transparent pointer-events-none">
+        <div className="max-w-2xl mx-auto pointer-events-auto bg-neutral-950/90 border border-neutral-900 rounded-2xl shadow-[0_-15px_30px_rgba(0,0,0,0.95)] backdrop-blur-lg flex flex-col overflow-hidden relative">
+          
+          {/* Gentle top accent slide indicator */}
+          <div className="w-12 h-1 bg-neutral-800/60 rounded-full mx-auto my-1.5" />
+
+          {/* Horizontal Sliding/Scrolling Navigator */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-2 px-3 scroll-smooth">
+            
+            {/* 1. About */}
+            <a 
+              href="#about"
+              className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-neutral-900/60 active:scale-95 transition-all min-w-[70px] text-center group"
+            >
+              <User className="w-4 h-4 text-neutral-400 group-hover:text-white transition-colors" />
+              <span className="font-mono text-[9px] font-medium tracking-wider text-neutral-300">About</span>
+            </a>
+
+            {/* 3. Journey (Achievements) */}
+            <a 
+              href="#journey"
+              className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-neutral-900/60 active:scale-95 transition-all min-w-[70px] text-center group"
+            >
+              <Award className="w-4 h-4 text-emerald-400 group-hover:text-emerald-300 transition-colors" />
+              <span className="font-mono text-[9px] font-medium tracking-wider text-neutral-300">Journey</span>
+            </a>
+
+            {/* 4. AquaSave */}
+            <a 
+              href="#projects"
+              className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-neutral-900/60 active:scale-95 transition-all min-w-[70px] text-center group"
+            >
+              <Droplet className="w-4 h-4 text-teal-400 group-hover:text-teal-300 transition-colors" />
+              <span className="font-mono text-[9px] font-medium tracking-wider text-neutral-300">AquaSave</span>
+            </a>
+
+            {/* 5. Research */}
+            <a 
+              href="#research"
+              className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-neutral-900/60 active:scale-95 transition-all min-w-[70px] text-center group"
+            >
+              <Layers className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
+              <span className="font-mono text-[9px] font-medium tracking-wider text-neutral-300">Research</span>
+            </a>
+
+            {/* 6. Writing */}
+            <a 
+              href="#blog"
+              className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-neutral-900/60 active:scale-95 transition-all min-w-[70px] text-center group"
+            >
+              <FileText className="w-4 h-4 text-amber-400 group-hover:text-amber-300 transition-colors" />
+              <span className="font-mono text-[9px] font-medium tracking-wider text-neutral-300">Writing</span>
+            </a>
+
+            {/* 7. Live Tool */}
+            <a 
+              href="#schema-utility"
+              className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-neutral-900/60 active:scale-95 transition-all min-w-[70px] text-center group"
+            >
+              <Settings className="w-4 h-4 text-neutral-500 group-hover:text-neutral-300 transition-colors" />
+              <span className="font-mono text-[9px] font-medium tracking-wider text-neutral-300">Live Tool</span>
+            </a>
+
+            {/* 8. Connect */}
+            <a 
+              href="#connect"
+              className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-neutral-900/60 active:scale-95 transition-all min-w-[70px] text-center group"
+            >
+              <Send className="w-4 h-4 text-blue-400 group-hover:text-blue-300 transition-colors" />
+              <span className="font-mono text-[9px] font-medium tracking-wider text-neutral-300">Connect</span>
+            </a>
+
+            {/* Divider line before action button */}
+            <div className="w-[1px] h-6 bg-neutral-900 shrink-0 self-center mx-1" />
+
+            {/* 9. Share / Save Trigger button */}
+            <button 
+              type="button"
+              onClick={() => setShowMobileShare(!showMobileShare)}
+              className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl active:scale-95 transition-all min-w-[70px] text-center ${showMobileShare ? "bg-purple-950/40 border border-purple-900/50" : "hover:bg-neutral-900/60 border border-transparent"}`}
+            >
+              <Share2 className="w-4 h-4 text-purple-400" />
+              <span className="font-mono text-[9px] font-semibold tracking-wider text-purple-300">Share/Save</span>
+            </button>
+
+          </div>
+
+          {/* Slide-Up Overlay Sheet for Mobile Share option buttons */}
+          <AnimatePresence>
+            {showMobileShare && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="border-t border-neutral-900 bg-[#060606] text-left overflow-hidden"
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+              >
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between text-[9px] font-mono text-neutral-500 uppercase tracking-widest pb-1 border-b border-neutral-900/60">
+                    <span>Quick Core Actions</span>
+                    <button 
+                      type="button" 
+                      onClick={() => setShowMobileShare(false)}
+                      className="text-[9px] text-purple-400 hover:text-white font-semibold"
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2">
+                    
+                    {/* Copy URL */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleCopyPortfolioLink();
+                      }}
+                      className="w-full text-left p-3 rounded-lg bg-neutral-950/60 hover:bg-neutral-900 border border-neutral-900 hover:border-neutral-800 transition flex items-center justify-between cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        {shareCopied ? (
+                          <Check className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-4 h-4 text-purple-400" />
+                        )}
+                        <span className="text-xs font-mono text-neutral-300">{shareCopied ? "Portfolio Link Copied!" : "Copy Portfolio Link"}</span>
+                      </div>
+                      {shareCopied && (
+                        <span className="text-[8px] bg-emerald-950 text-emerald-400 border border-emerald-900 px-1.5 py-0.5 rounded font-mono font-bold">
+                          DONE
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Download Resume Link */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleDownloadResume();
+                        setShowMobileShare(false);
+                      }}
+                      className="w-full text-left p-3 rounded-lg bg-neutral-950/60 hover:bg-neutral-900 border border-neutral-900 hover:border-neutral-800 transition flex items-center gap-2.5 cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-indigo-400" />
+                      <span className="text-xs font-mono text-neutral-300">Download Portfolio File (.TXT)</span>
+                    </button>
+
+                    {/* Print PDF Page */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMobileShare(false);
+                        setTimeout(() => window.print(), 180);
+                      }}
+                      className="w-full text-left p-3 rounded-lg bg-neutral-950/60 hover:bg-neutral-900 border border-neutral-900 hover:border-neutral-800 transition flex items-center gap-2.5 cursor-pointer"
+                    >
+                      <FileText className="w-4 h-4 text-teal-400" />
+                      <span className="text-xs font-mono text-neutral-300">Save as PDF / Print Portfolio</span>
+                    </button>
+
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+        </div>
+      </div>
 
     </div>
   );

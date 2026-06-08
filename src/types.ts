@@ -27,3 +27,9 @@ export interface SocialLink {
   url: string;
   iconName: string; // Used to determine icon from lucide-react
 }
+
+export interface SkillCategory {
+  category: string;
+  iconName: string; // Used to reference Lucide icon component name
+  skills: string[];
+}

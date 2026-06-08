@@ -1,4 +1,4 @@
-import { TimelineItem, BlogPost, SocialLink } from "../types";
+import { TimelineItem, BlogPost, SocialLink, SkillCategory } from "../types";
 
 export const personalInfo = {
   name: "Riya Sharma Bharadwaj",
@@ -134,5 +134,55 @@ export const socialLinks: SocialLink[] = [
     name: "About.me",
     url: "https://about.me/riyasharmabharadwaj",
     iconName: "User"
+  }
+];
+
+export const skillCategories: SkillCategory[] = [
+  {
+    category: "Programming Languages",
+    iconName: "Code",
+    skills: [
+      "Python (Data Science, Scikit-Learn, Isolation Forests)",
+      "TypeScript / JavaScript (React, Node.js, ESM/CJS)",
+      "C++ (Hardware Integration, Embedded Systems)",
+      "SQL (PostgreSQL, Structured Relational Queries)",
+      "HTML5 & Tailwind CSS (Responsive Design, Custom Themes)"
+    ]
+  },
+  {
+    category: "Software & Systems",
+    iconName: "Cpu",
+    skills: [
+      "Git & GitHub Version Control (CI/CD Pipelines)",
+      "Docker & Container Deployments (Cloud Run Ecosystems)",
+      "Express.js Backend Systems (Vite Middleware Integration)",
+      "Telemetry & Sensor Streams (Real-Time Telemetry Mapping)",
+      "Arduino & Raspberry Pi Hardware Architecture",
+      "Jupyter Notebook Environments & Predictive Modeling"
+    ]
+  },
+  {
+    category: "Design & Modeling Tools",
+    iconName: "PenTool",
+    skills: [
+      "Figma (High-Fidelity UI/UX & Interaction Design)",
+      "Fusion 360 / AutoCAD (Mechanical Hardware Design)",
+      "LaTeX (Typesetting Complex Academic manuscripts)",
+      "MATLAB / Numerical Computation & Time-Series Graphs",
+      "D3.js & Recharts (Advanced Data Graphics)",
+      "Vector Graphics & SVG Illustration"
+    ]
+  },
+  {
+    category: "Soft Skills & Leadership",
+    iconName: "Award",
+    skills: [
+      "Scientific & Empirical Research Writing",
+      "Interdisciplinary Presentation & Public Speaking",
+      "Critical Problem Solving & Algorithm Engineering",
+      "Collaborative Teamwork & Multi-User Ideation",
+      "Environmental Resource Optimization & Analysis",
+      "Productive Time-Management & Academic Rigor"
+    ]
   }
 ];
