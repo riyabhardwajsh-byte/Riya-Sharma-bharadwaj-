@@ -43,10 +43,11 @@ import {
   Download,
   Cpu,
   PenTool,
-  User
+  User,
+  Newspaper
 } from "lucide-react";
-import { personalInfo, timelineAchievements, blogPosts, socialLinks, skillCategories } from "./data/portfolioData";
-import { TimelineItem, BlogPost, SkillCategory } from "./types";
+import { personalInfo, timelineAchievements, blogPosts, socialLinks, skillCategories, prFeatures } from "./data/portfolioData";
+import { TimelineItem, BlogPost, SkillCategory, PRFeature } from "./types";
 import logoImg from "./logo.png";
 import profileImg from "./assets/images/riya_profile.jpg";
 import aquasaveGlimpse1 from "./assets/images/aquasave_glimpse.png";
@@ -219,6 +220,7 @@ export default function App() {
   const [showShareDropdown, setShowShareDropdown] = useState<boolean>(false);
   const [showMobileShare, setShowMobileShare] = useState<boolean>(false);
   const [shareCopied, setShareCopied] = useState<boolean>(false);
+  const [showAllPR, setShowAllPR] = useState<boolean>(false);
 
   // States for Developer Creator Panel Locks
   const [isAuthorizedCreator, setIsAuthorizedCreator] = useState<boolean>(() => {
@@ -584,6 +586,10 @@ Generated seamlessly from Riya's Living Portfolio. Visit: ${window.location.host
             </a>
             <a href="#blog" className="hover:text-white transition-colors relative py-1 group/item">
               <span>Writing</span>
+              <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-purple-400 transition-all group-hover/item:w-full" />
+            </a>
+            <a href="#press" className="hover:text-white transition-colors relative py-1 group/item">
+              <span>Press</span>
               <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-purple-400 transition-all group-hover/item:w-full" />
             </a>
             <div className="relative inline-block" id="share-save-container">
@@ -2004,6 +2010,98 @@ Generated seamlessly from Riya's Living Portfolio. Visit: ${window.location.host
         <hr className="border-neutral-900" />
       </div>
 
+      {/* Press & Media Features Section */}
+      <motion.section 
+        className="py-20 md:py-28 bg-[#040404]" 
+        id="press"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+      >
+        <div className="max-w-5xl mx-auto px-4 md:px-8">
+          
+          <div className="space-y-3 mb-12 text-left">
+            <div className="inline-flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+              <span className="font-mono text-xs tracking-widest uppercase text-purple-400">Media Features</span>
+            </div>
+            <h2 className="text-4xl font-display font-medium text-white tracking-tight">Press &amp; Recognition</h2>
+            <p className="text-neutral-400 text-sm font-light max-w-2xl leading-relaxed">
+              Global publications highlighting my progressive web application (PWA) developments, environmental conservation efforts, and engineering solutions designed for municipal water telemetry.
+            </p>
+          </div>
+
+          {/* Interactive PR Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {(showAllPR ? prFeatures : prFeatures.slice(0, 6)).map((pr) => (
+              <div 
+                key={pr.id}
+                className="bg-neutral-950/60 border border-neutral-900/80 rounded-2xl p-5 hover:border-purple-900/40 hover:bg-neutral-900/10 transition-all duration-300 flex flex-col justify-between relative group overflow-hidden"
+              >
+                {/* Subtle top purple highlight */}
+                <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                <div>
+                  {/* Category / Publisher and Date header */}
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    <span className="inline-block bg-neutral-900/80 border border-neutral-850 text-purple-400 text-[9px] font-mono uppercase px-2.5 py-0.5 rounded-md tracking-wider font-semibold">
+                      {pr.publication}
+                    </span>
+                    <span className="text-neutral-500 font-mono text-[9px]">
+                      {pr.date}
+                    </span>
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="text-sm font-medium text-neutral-200 group-hover:text-white transition-colors line-clamp-3 mb-2 font-display leading-snug text-left">
+                    {pr.title}
+                  </h3>
+
+                  {/* Excerpt */}
+                  <p className="text-xs font-light text-neutral-400 line-clamp-2 leading-relaxed mb-4 text-left">
+                    {pr.excerpt}
+                  </p>
+                </div>
+
+                {/* External Link Action Button */}
+                <div className="pt-3 border-t border-neutral-900/60 mt-auto flex">
+                  <a
+                    href={pr.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-mono text-purple-400 hover:text-purple-300 transition-colors group/btn"
+                  >
+                    <span>Read Full Story</span>
+                    <ExternalLink className="w-3 h-3 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Toggle Expand Button */}
+          {prFeatures.length > 6 && (
+            <div className="text-center mt-12">
+              <button
+                type="button"
+                onClick={() => setShowAllPR(!showAllPR)}
+                className="px-6 py-2.5 bg-neutral-950 hover:bg-neutral-900 border border-neutral-800 text-xs font-mono text-neutral-300 hover:text-white rounded-full transition-all duration-200 active:scale-95 shadow-md inline-flex items-center gap-2 cursor-pointer"
+              >
+                <Newspaper className="w-3.5 h-3.5 text-purple-400" />
+                <span>{showAllPR ? "Collapse Press Grid" : `Show All ${prFeatures.length} Publications`}</span>
+              </button>
+            </div>
+          )}
+
+        </div>
+      </motion.section>
+
+      {/* Section Divider Line */}
+      <div className="max-w-6xl mx-auto px-4 md:px-8">
+        <hr className="border-neutral-900" />
+      </div>
+
       </main>
 
       {/* Connect & Footer Section */}
@@ -2346,6 +2444,15 @@ Generated seamlessly from Riya's Living Portfolio. Visit: ${window.location.host
             >
               <FileText className="w-4 h-4 text-amber-400 group-hover:text-amber-300 transition-colors" />
               <span className="font-mono text-[9px] font-medium tracking-wider text-neutral-300">Writing</span>
+            </a>
+
+            {/* 6.5. Press & Recognition */}
+            <a 
+              href="#press"
+              className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-neutral-900/60 active:scale-95 transition-all min-w-[70px] text-center group"
+            >
+              <Newspaper className="w-4 h-4 text-purple-400 group-hover:text-purple-300 transition-colors" />
+              <span className="font-mono text-[9px] font-medium tracking-wider text-neutral-300">Press</span>
             </a>
 
             {/* 7. Live Tool */}

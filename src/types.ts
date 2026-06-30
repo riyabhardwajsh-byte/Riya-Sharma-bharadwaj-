@@ -33,3 +33,13 @@ export interface SkillCategory {
   iconName: string; // Used to reference Lucide icon component name
   skills: string[];
 }
+
+export interface PRFeature {
+  id: string;
+  publication: string;
+  title: string;
+  url: string;
+  date: string;
+  excerpt: string;
+}
+
